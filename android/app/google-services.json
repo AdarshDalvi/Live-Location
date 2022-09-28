@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "30171496459",
+    "project_id": "live-lovation-demo",
+    "storage_bucket": "live-lovation-demo.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:30171496459:android:46069555c23ce82fe0070e",
+        "android_client_info": {
+          "package_name": "com.example.live_location_app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "30171496459-2vq9p869b4gs9niqa3erdp0n28o9555a.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCula29ADpWUYvwhqeLF56TnCfcmoth9fI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "30171496459-2vq9p869b4gs9niqa3erdp0n28o9555a.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "30171496459-0d4uf2bt8ash0j7aeuhlmsn4eb74as5k.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.liveLocationApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

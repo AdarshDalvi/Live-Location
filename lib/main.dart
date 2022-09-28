@@ -1,6 +1,18 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
 
-void main() {
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import 'package:live_location_app/screens/live_location.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'firebase_options.dart';
+import 'package:location/location.dart'as loc;
+
+void main() async{
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
@@ -12,6 +24,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Flutter Demo',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
         // This is the theme of your application.
         //
@@ -24,92 +37,139 @@ class MyApp extends StatelessWidget {
         // is not restarted.
         primarySwatch: Colors.blue,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const FirstPage(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class FirstPage extends StatefulWidget {
+  const FirstPage({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<FirstPage> createState() => _FirstPageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _FirstPageState extends State<FirstPage> {
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+  final loc.Location location= loc.Location();
+  StreamSubscription<loc.LocationData>? _locationSubscription;
+
+  @override
+  void initState(){
+    super.initState();
+  }
+  
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("First Page"),
+      ),
+      body: Column(
+        children: [
+          TextButton(
+              onPressed: () {
+                _getLocation();
+              },
+              child: Text('add my location')),
+          TextButton(
+              onPressed: () {
+                _listenLocation();
+              },
+              child: Text('enable live location')),
+          TextButton(
+              onPressed: () {
+                _stopListening();
+              },
+              child: Text('stop live location')),
+          Expanded(
+              child: StreamBuilder(
+            stream:
+                FirebaseFirestore.instance.collection('location').snapshots(),
+            builder: (context, AsyncSnapshot<QuerySnapshot> snapshot) {
+              if (!snapshot.hasData) {
+                return Center(child: CircularProgressIndicator());
+              }
+              return ListView.builder(
+                  itemCount: snapshot.data?.docs.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      title:
+                          Text(snapshot.data!.docs[index]['name'].toString()),
+                      subtitle: Row(
+                        children: [
+                          Text(snapshot.data!.docs[index]['latitude']
+                              .toString()),
+                          SizedBox(
+                            width: 20,
+                          ),
+                          Text(snapshot.data!.docs[index]['longitude']
+                              .toString()),
+                        ],
+                      ),
+                      trailing: IconButton(
+                        icon: Icon(Icons.directions),
+                        onPressed: () {
+                          Navigator.of(context).push(MaterialPageRoute(
+                              builder: (context) =>
+                                  LiveLocation(user_id:snapshot.data!.docs[index].id)));
+                        },
+                      ),
+                    );
+                  });
+            },
+          )),
+        ],
+      ),
+    );
+  }
+
+  _getLocation() async {
+    try {
+      final loc.LocationData _locationResult = await location.getLocation();
+      await FirebaseFirestore.instance.collection('location').doc('user1').set({
+        'latitude': _locationResult.latitude,
+        'longitude': _locationResult.longitude,
+        'name': 'john'
+      }, SetOptions(merge: true));
+    } catch (e) {
+      print(e);
+    }
+  }
+
+  Future<void> _listenLocation() async {
+    _locationSubscription = location.onLocationChanged.handleError((onError) {
+      print(onError);
+      _locationSubscription?.cancel();
+      setState(() {
+        _locationSubscription = null;
+      });
+    }).listen((loc.LocationData currentlocation) async {
+      await FirebaseFirestore.instance.collection('location').doc('user1').set({
+        'latitude': currentlocation.latitude,
+        'longitude': currentlocation.longitude,
+        'name': 'john'
+      }, SetOptions(merge: true));
     });
   }
 
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Invoke "debug painting" (press "p" in the console, choose the
-          // "Toggle Debug Paint" action from the Flutter Inspector in Android
-          // Studio, or the "Toggle Debug Paint" command in Visual Studio Code)
-          // to see the wireframe for each widget.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
-    );
+  _stopListening() {
+    _locationSubscription?.cancel();
+    setState(() {
+      _locationSubscription = null;
+    });
+  }
+
+  _requestPermission() async {
+    var status = await Permission.location.request();
+    if (status.isGranted) {
+      print('done');
+    } else if (status.isDenied) {
+      _requestPermission();
+    } else if (status.isPermanentlyDenied) {
+      openAppSettings();
+    }
   }
 }
+
